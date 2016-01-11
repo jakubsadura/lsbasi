@@ -2,8 +2,8 @@
 #
 # EOF (end-of-file) token is used to indicate that
 # there is no more input left for lexical analysis
-INTEGER, PLUS, EOF = 'INTEGER', 'PLUS', 'EOF'
-
+INTEGER, PLUS, MINUS, SPACE, EOF = 'INTEGER', 'PLUS', 'MINUS', 'SPACE', 'EOF'
+OPERATION = 'OPERATION'
 
 class Token(object):
     def __init__(self, type, value):
@@ -36,6 +36,8 @@ class Interpreter(object):
         self.pos = 0
         # current token instance
         self.current_token = None
+        # temp value
+        self.temp_val = 0
 
     def error(self):
         raise Exception('Error parsing input')
@@ -70,7 +72,17 @@ class Interpreter(object):
         if current_char == '+':
             token = Token(PLUS, current_char)
             self.pos += 1
-            return token
+            return token 
+        
+        if current_char == '-':
+            token = Token(MINUS, current_char)
+            self.pos += 1
+            return token 
+                        
+        if current_char == ' ':
+            token = Token(SPACE, current_char)
+            self.pos += 1
+            return token 
 
         self.error()
 
@@ -79,10 +91,30 @@ class Interpreter(object):
         # type and if they match then "eat" the current token
         # and assign the next token to the self.current_token,
         # otherwise raise an exception.
-        if self.current_token.type == token_type:
+        if INTEGER == token_type == self.current_token.type:
+            self.temp_val += self.current_token.value
+            
+            prevtoken = self.current_token            
             self.current_token = self.get_next_token()
-        else:
-            self.error()
+            nexttoken = self.current_token
+            
+            if (prevtoken.type == nexttoken.type == INTEGER):
+                self.temp_val *= 10
+                self.eat(INTEGER)                
+            return
+
+        if OPERATION == token_type and (self.current_token.type == PLUS or self.current_token.type == MINUS):
+            self.temp_val = self.current_token.type
+            self.current_token = self.get_next_token()            
+            return
+                        
+        if SPACE == self.current_token.type:
+            print('ignoring space')
+            self.current_token = self.get_next_token()
+            self.eat(token_type)
+            return
+        
+        self.error()
 
     def expr(self):
         """expr -> INTEGER PLUS INTEGER"""
@@ -90,16 +122,21 @@ class Interpreter(object):
         self.current_token = self.get_next_token()
 
         # we expect the current token to be a single-digit integer
-        left = self.current_token
+        #left = self.current_token
+        self.temp_val = 0
         self.eat(INTEGER)
+        left = self.temp_val
 
-        # we expect the current token to be a '+' token
-        op = self.current_token
-        self.eat(PLUS)
+        # we expect the current token to be a '+' token    
+        self.temp_val = ''
+        self.eat(OPERATION)
+        op = self.temp_val
 
         # we expect the current token to be a single-digit integer
-        right = self.current_token
+        #right = self.current_token
+        self.temp_val = 0
         self.eat(INTEGER)
+        right = self.temp_val
         # after the above call the self.current_token is set to
         # EOF token
 
@@ -107,7 +144,10 @@ class Interpreter(object):
         # has been successfully found and the method can just
         # return the result of adding two integers, thus
         # effectively interpreting client input
-        result = left.value + right.value
+        if op == PLUS:
+            result = left + right
+        if op == MINUS:
+            result = left - right
         return result
 
 
